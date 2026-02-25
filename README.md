@@ -13,18 +13,18 @@ In Xcode:
 
 1. `File` -> `Add Package Dependencies...`
 2. Choose `Add Local...`
-3. Select the `SDOpenAIClient` folder
+3. Select this package folder (for example: `SDOpenAIClientKit`)
 
 Or with SwiftPM:
 
 ```swift
-.package(path: "./SDOpenAIClient")
+.package(path: "./SDOpenAIClientKit")
 ```
 
 For a public GitHub repo:
 
 ```swift
-.package(url: "https://github.com/saurabhdave/SDOpenAIClientKit.git", from: "1.0.0")
+.package(url: "https://github.com/<your-username>/SDOpenAIClient.git", from: "1.0.0")
 ```
 
 ## Quick Start
@@ -85,6 +85,12 @@ let configuration = try OpenAIClientConfiguration.loadFromPlist(
 
 let client = OpenAIClient(configuration: configuration)
 ```
+
+## Source Layout
+
+- `Sources/SDOpenAIClient/Models`: configuration, message, and API payload/response models
+- `Sources/SDOpenAIClient/Network`: client actor and networking error types
+- `Sources/SDOpenAIClient/Utilities`: plist loader and shared model utilities
 
 ## Notes
 
