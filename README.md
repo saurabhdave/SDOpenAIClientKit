@@ -9,22 +9,36 @@ A lightweight Swift Package wrapper for OpenAI's `responses` API with:
 
 ## Installation
 
+Use Swift Package Manager from any iOS project.
+
 In Xcode:
 
-1. `File` -> `Add Package Dependencies...`
-2. Choose `Add Local...`
-3. Select this package folder (for example: `SDOpenAIClientKit`)
+1. `File` -> `Swift Packages` -> `Add Package Dependency...`
+2. Enter `https://github.com/saurabhdave/SDOpenAIClientKit.git`
+3. Choose dependency rule `Up to Next Major Version` and set `1.0.0`
+4. Click `Add Package`
+5. Import in your code:
+
+```swift
+import SDOpenAIClient
+```
 
 Or with SwiftPM:
 
 ```swift
-.package(path: "./SDOpenAIClientKit")
+.package(url: "https://github.com/saurabhdave/SDOpenAIClientKit.git", from: "1.0.0")
 ```
 
-For a public GitHub repo:
+Then add the product to your target dependencies:
 
 ```swift
-.package(url: "https://github.com/saurabhdave/SDOpenAIClientKit", from: "1.0.0")
+.product(name: "SDOpenAIClient", package: "SDOpenAIClientKit")
+```
+
+For local development:
+
+```swift
+.package(path: "./SDOpenAIClientKit")
 ```
 
 ## Quick Start
