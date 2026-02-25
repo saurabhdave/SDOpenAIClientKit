@@ -3,24 +3,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "SDOpenAIClientKit",
+    name: "SDOpenAIClient",
     platforms: [
         .iOS(.v16),
         .macOS(.v13)
     ],
     products: [
         .library(
-            name: "SDOpenAIClientKit",
-            targets: ["SDOpenAIClientKit"]
+            name: "SDOpenAIClient",
+            targets: ["SDOpenAIClient"]
         )
     ],
     targets: [
         .target(
-            name: "SDOpenAIClientKit"
+            name: "SDOpenAIClient"
         ),
         .testTarget(
-            name: "SDOpenAIClientKitTests",
-            dependencies: ["SDOpenAIClientKit"]
+            name: "SDOpenAIClientTests",
+            dependencies: ["SDOpenAIClient"]
         )
     ]
 )

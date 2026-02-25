@@ -1,8 +1,8 @@
 import Foundation
 import XCTest
-@testable import SDOpenAIClientKit
+@testable import SDOpenAIClient
 
-final class SDOpenAIClientKitTests: XCTestCase {
+final class SDOpenAIClientTests: XCTestCase {
     override func setUp() {
         super.setUp()
         URLProtocolMock.reset()
@@ -69,13 +69,90 @@ final class SDOpenAIClientKitTests: XCTestCase {
         XCTAssertEqual(secondRequest.input.map(\.content), ["Question 1", "First response", "Question 2"])
         XCTAssertEqual(secondRequest.input.map(\.role), ["user", "assistant", "user"])
     }
+
+    func testConfigurationLoadsFromPlistURL() throws {
+        let plist: [String: Any] = [
+            OpenAIClientConfiguration.PlistKey.apiKey: "plist-key",
+            OpenAIClientConfiguration.PlistKey.model: "gpt-4o-mini",
+            OpenAIClientConfiguration.PlistKey.systemPrompt: "Be concise.",
+            OpenAIClientConfiguration.PlistKey.temperature: 0.25,
+            OpenAIClientConfiguration.PlistKey.maxContextCharacters: 7_500,
+            OpenAIClientConfiguration.PlistKey.maxHistoryItems: 24,
+            OpenAIClientConfiguration.PlistKey.requestTimeout: 15,
+            OpenAIClientConfiguration.PlistKey.endpoint: "https://example.com/v1/responses",
+            OpenAIClientConfiguration.PlistKey.retryMaxAttempts: 4,
+            OpenAIClientConfiguration.PlistKey.retryBaseDelay: 0.2,
+            OpenAIClientConfiguration.PlistKey.retryMaxDelay: 1.5,
+            OpenAIClientConfiguration.PlistKey.retryBackoffMultiplier: 1.8,
+            OpenAIClientConfiguration.PlistKey.retryJitterRatio: 0.1,
+            OpenAIClientConfiguration.PlistKey.retryableStatusCodes: [408, 429, 500]
+        ]
+        let url = try makeTemporaryPlist(plist)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let configuration = try OpenAIClientConfiguration(plistURL: url)
+
+        XCTAssertEqual(configuration.apiKey, "plist-key")
+        XCTAssertEqual(configuration.model, "gpt-4o-mini")
+        XCTAssertEqual(configuration.systemPrompt, "Be concise.")
+        XCTAssertEqual(configuration.temperature, 0.25)
+        XCTAssertEqual(configuration.maxContextCharacters, 7_500)
+        XCTAssertEqual(configuration.maxHistoryItems, 24)
+        XCTAssertEqual(configuration.requestTimeout, 15)
+        XCTAssertEqual(configuration.endpoint, URL(string: "https://example.com/v1/responses"))
+        XCTAssertEqual(configuration.retryPolicy.maxAttempts, 4)
+        XCTAssertEqual(configuration.retryPolicy.baseDelay, 0.2)
+        XCTAssertEqual(configuration.retryPolicy.maxDelay, 1.5)
+        XCTAssertEqual(configuration.retryPolicy.backoffMultiplier, 1.8)
+        XCTAssertEqual(configuration.retryPolicy.jitterRatio, 0.1)
+        XCTAssertEqual(configuration.retryPolicy.retryableStatusCodes, [408, 429, 500])
+    }
+
+    func testConfigurationPlistMissingAPIKeyThrows() {
+        let plist: [String: Any] = [
+            OpenAIClientConfiguration.PlistKey.model: "gpt-4.1-mini"
+        ]
+
+        XCTAssertThrowsError(try OpenAIClientConfiguration(plistDictionary: plist)) { error in
+            XCTAssertEqual(
+                error as? OpenAIClientConfigurationError,
+                .missingRequiredKey(OpenAIClientConfiguration.PlistKey.apiKey)
+            )
+        }
+    }
+
+    func testConfigurationPlistInvalidEndpointThrows() {
+        let plist: [String: Any] = [
+            OpenAIClientConfiguration.PlistKey.apiKey: "plist-key",
+            OpenAIClientConfiguration.PlistKey.endpoint: "not a url"
+        ]
+
+        XCTAssertThrowsError(try OpenAIClientConfiguration(plistDictionary: plist)) { error in
+            XCTAssertEqual(
+                error as? OpenAIClientConfigurationError,
+                .invalidValue(
+                    key: OpenAIClientConfiguration.PlistKey.endpoint,
+                    expected: "a valid URL string"
+                )
+            )
+        }
+    }
 }
 
-private extension SDOpenAIClientKitTests {
+private extension SDOpenAIClientTests {
     func makeMockedSession() -> URLSession {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [URLProtocolMock.self]
         return URLSession(configuration: config)
+    }
+
+    func makeTemporaryPlist(_ dictionary: [String: Any]) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("plist")
+        let didWrite = (dictionary as NSDictionary).write(to: url, atomically: true)
+        XCTAssertTrue(didWrite)
+        return url
     }
 }
 

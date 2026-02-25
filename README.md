@@ -1,4 +1,4 @@
-# SDOpenAIClientKit
+# SDOpenAIClient
 
 A lightweight Swift Package wrapper for OpenAI's `responses` API with:
 
@@ -13,12 +13,12 @@ In Xcode:
 
 1. `File` -> `Add Package Dependencies...`
 2. Choose `Add Local...`
-3. Select the `SDOpenAIClientKit` folder
+3. Select the `SDOpenAIClient` folder
 
 Or with SwiftPM:
 
 ```swift
-.package(path: "./SDOpenAIClientKit")
+.package(path: "./SDOpenAIClient")
 ```
 
 For a public GitHub repo:
@@ -30,7 +30,7 @@ For a public GitHub repo:
 ## Quick Start
 
 ```swift
-import SDOpenAIClientKit
+import SDOpenAIClient
 
 let client = OpenAIClient(
     configuration: OpenAIClientConfiguration(
@@ -54,6 +54,36 @@ let stream = try await client.stream("Write a short poem about rain.")
 for try await delta in stream {
     print(delta, terminator: "")
 }
+```
+
+## Configure via Plist
+
+Create `OpenAIClientConfiguration.plist` in your app bundle and add values like:
+
+- `apiKey` (required)
+- `model`
+- `systemPrompt`
+- `temperature`
+- `maxContextCharacters`
+- `maxHistoryItems`
+- `requestTimeout`
+- `endpoint`
+- `retryMaxAttempts`
+- `retryBaseDelay`
+- `retryMaxDelay`
+- `retryBackoffMultiplier`
+- `retryJitterRatio`
+- `retryableStatusCodes` (array of integers)
+
+Then load it:
+
+```swift
+let configuration = try OpenAIClientConfiguration.loadFromPlist(
+    named: "OpenAIClientConfiguration",
+    in: .main
+)
+
+let client = OpenAIClient(configuration: configuration)
 ```
 
 ## Notes
