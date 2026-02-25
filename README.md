@@ -24,7 +24,7 @@ Or with SwiftPM:
 For a public GitHub repo:
 
 ```swift
-.package(url: "https://github.com/<your-username>/SDOpenAIClientKit.git", from: "1.0.0")
+.package(url: "https://github.com/saurabhdave/SDOpenAIClientKit.git", from: "1.0.0")
 ```
 
 ## Quick Start
