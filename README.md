@@ -1,3 +1,8 @@
+
+<p align="center">
+<img width="1408" height="768" alt="image_0" src="https://github.com/user-attachments/assets/57989062-1171-46a1-8af3-e22a6e497ad1" />
+</p>
+
 # SDOpenAIClient
 
 A lightweight, zero-dependency Swift Package wrapper for OpenAI's `responses` API with:
