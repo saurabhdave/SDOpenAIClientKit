@@ -1,11 +1,19 @@
 # SDOpenAIClient
 
-A lightweight Swift Package wrapper for OpenAI's `responses` API with:
+A lightweight, zero-dependency Swift Package wrapper for OpenAI's `responses` API with:
 
-- non-stream and stream text generation
-- built-in multi-turn memory
-- bounded context/history trimming
-- robust HTTP and streaming error handling
+- Non-stream and stream text generation
+- Built-in multi-turn memory with flexible history trimming
+- Robust HTTP and streaming error handling with retry support
+- Type-safe API key and model handling
+- Protocol-based dependency injection for easy testing
+- Token usage metadata tracking
+- Configurable logging
+- Swift 6 strict concurrency compliance
+
+## Platforms
+
+iOS 18+ · macOS 15+ · tvOS 18+ · watchOS 11+ · visionOS 2+
 
 ## Installation
 
@@ -47,9 +55,9 @@ For local development:
 import SDOpenAIClient
 
 let client = OpenAIClient(
-    configuration: OpenAIClientConfiguration(
-        apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "",
-        model: "gpt-4.1-mini",
+    configuration: try OpenAIClientConfiguration(
+        apiKey: APIKey("your-api-key"),
+        model: .gpt5_4Mini,
         systemPrompt: "You are a concise assistant.",
         temperature: 0.4,
         requestTimeout: 45,
@@ -70,9 +78,119 @@ for try await delta in stream {
 }
 ```
 
+## Token Usage Metadata
+
+```swift
+let (text, metadata) = try await client.sendWithMetadata("Hello!")
+if let metadata {
+    print("Input tokens: \(metadata.inputTokens)")
+    print("Output tokens: \(metadata.outputTokens)")
+    print("Total tokens: \(metadata.totalTokens)")
+}
+```
+
+## Type-Safe Models
+
+Use the `OpenAIModel` type for compile-time safety with built-in constants:
+
+```swift
+let config = try OpenAIClientConfiguration(
+    apiKey: APIKey("key"),
+    model: .gpt4o           // or .gpt5_4, .gpt5_4Mini, .gpt5_4Nano, .o3Mini, .o4Mini
+)
+```
+
+Custom models are supported via string literals or `OpenAIModel(rawValue:)`:
+
+```swift
+let model: OpenAIModel = "my-fine-tuned-model"
+```
+
+## API Key Security
+
+The `APIKey` type wraps your key and redacts it from logs:
+
+```swift
+let key = APIKey("sk-abc123")
+print(key)       // "APIKey([REDACTED])"
+debugPrint(key)  // "APIKey([REDACTED])"
+```
+
+## History Trimming
+
+Control how conversation history is managed:
+
+```swift
+// Trim when total characters exceed 10,000
+let config = try OpenAIClientConfiguration(
+    apiKey: APIKey("key"),
+    historyTrimmingStrategy: .characterCount(10_000)
+)
+
+// Keep at most 50 history items
+let config2 = try OpenAIClientConfiguration(
+    apiKey: APIKey("key"),
+    historyTrimmingStrategy: .itemCount(50)
+)
+
+// Trim by whichever limit is hit first (default)
+let config3 = try OpenAIClientConfiguration(
+    apiKey: APIKey("key"),
+    historyTrimmingStrategy: .both(maxCharacters: 16_000, maxItems: 100)
+)
+
+// Never trim (caller manages overflow)
+let config4 = try OpenAIClientConfiguration(
+    apiKey: APIKey("key"),
+    historyTrimmingStrategy: .unlimited
+)
+```
+
+## Logging
+
+Attach a logger to receive lifecycle events:
+
+```swift
+// Built-in console logger
+let config = try OpenAIClientConfiguration(
+    apiKey: APIKey("key"),
+    logger: PrintLogger(minimumLevel: .debug)
+)
+
+// Custom logger — conform to OpenAIClientLogger
+struct MyLogger: OpenAIClientLogger {
+    func log(level: LogLevel, message: String, metadata: [String: String]?) {
+        // Send to your logging backend
+    }
+}
+```
+
+## Protocol-Based Dependency Injection
+
+`OpenAIClient` conforms to `OpenAIClientProtocol`, enabling easy mocking in tests:
+
+```swift
+protocol OpenAIClientProtocol: Sendable {
+    func send(_ prompt: String) async throws -> String
+    func sendWithMetadata(_ prompt: String) async throws -> (text: String, metadata: ResponseMetadata?)
+    func stream(_ prompt: String) async throws -> AsyncThrowingStream<String, Error>
+    func clearHistory() async
+}
+```
+
+Use the built-in `MockOpenAIClient` in tests:
+
+```swift
+let mock = MockOpenAIClient()
+mock.stubbedResponse = "Mocked response"
+mock.stubbedMetadata = ResponseMetadata(inputTokens: 5, outputTokens: 10, totalTokens: 15)
+
+let viewModel = MyViewModel(client: mock)
+```
+
 ## Configure via Plist
 
-Create `OpenAIClientConfiguration.plist` in your app bundle and add values like:
+Create `OpenAIClientConfiguration.plist` and add values like:
 
 - `apiKey` (required)
 - `model`
@@ -89,27 +207,34 @@ Create `OpenAIClientConfiguration.plist` in your app bundle and add values like:
 - `retryJitterRatio`
 - `retryableStatusCodes` (array of integers)
 
-Then load it:
+Load from a bundle:
 
 ```swift
 let configuration = try OpenAIClientConfiguration.loadFromPlist(
     named: "OpenAIClientConfiguration",
     in: .main
 )
+```
 
-let client = OpenAIClient(configuration: configuration)
+Or load from a URL (useful in tests and SPM targets where `Bundle.main` is unavailable):
+
+```swift
+let url = Bundle.module.url(forResource: "OpenAIClientConfiguration", withExtension: "plist")!
+let configuration = try OpenAIClientConfiguration.loadFromPlist(at: url)
 ```
 
 ## Source Layout
 
-- `Sources/SDOpenAIClient/Models`: configuration, message, and API payload/response models
-- `Sources/SDOpenAIClient/Network`: client actor and networking error types
-- `Sources/SDOpenAIClient/Utilities`: plist loader and shared model utilities
+- `Sources/SDOpenAIClient/Models`: configuration, message, API key, model type, trimming strategy, and API payload/response models
+- `Sources/SDOpenAIClient/Network`: client actor, protocol, mock client, and networking error types
+- `Sources/SDOpenAIClient/Utilities`: plist loader, logger infrastructure, and shared utilities
 
 ## Notes
 
+- All public types are `Sendable`-compliant for Swift 6 strict concurrency.
 - Conversation history is stored inside the client actor for thread safety.
-- History is automatically trimmed by `maxContextCharacters` and `maxHistoryItems`.
+- History is automatically trimmed according to the configured `HistoryTrimmingStrategy`.
 - Call `clearHistory()` to reset context.
+- Configuration init is `throws` — invalid values are caught immediately.
 - `requestTimeout` controls per-request timeout.
 - `retryPolicy` supports exponential backoff with jitter for retryable failures.

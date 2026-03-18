@@ -1,15 +1,12 @@
 import Foundation
 
-public enum OpenAIClientError: LocalizedError, Equatable {
-    case missingAPIKey
+public enum OpenAIClientError: LocalizedError, Equatable, Sendable {
     case invalidResponse
     case emptyResponse
     case badResponse(statusCode: Int, message: String)
 
     public var errorDescription: String? {
         switch self {
-        case .missingAPIKey:
-            return "Missing OpenAI API key."
         case .invalidResponse:
             return "Invalid response from OpenAI API."
         case .emptyResponse:

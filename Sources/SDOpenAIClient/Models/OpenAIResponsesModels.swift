@@ -1,6 +1,6 @@
 import Foundation
 
-struct ResponsesRequest: Encodable {
+struct ResponsesRequest: Encodable, Sendable {
     let model: String
     let instructions: String?
     let input: [ResponseInputItem]
@@ -8,36 +8,37 @@ struct ResponsesRequest: Encodable {
     let temperature: Double
 }
 
-struct ResponseInputItem: Encodable {
+struct ResponseInputItem: Encodable, Sendable {
     let role: OpenAIMessage.Role
     let content: String
 }
 
-struct ResponsesAPIResponse: Decodable {
+struct ResponsesAPIResponse: Decodable, Sendable {
     let output: [ResponseOutputItem]
+    let usage: ResponseMetadata?
 }
 
-struct ResponseOutputItem: Decodable {
+struct ResponseOutputItem: Decodable, Sendable {
     let type: String?
     let content: [ResponseOutputContent]?
 }
 
-struct ResponseOutputContent: Decodable {
+struct ResponseOutputContent: Decodable, Sendable {
     let type: String?
     let text: String?
 }
 
-struct ResponsesStreamEvent: Decodable {
+struct ResponsesStreamEvent: Decodable, Sendable {
     let type: String
     let delta: String?
     let error: ErrorResponse?
 }
 
-struct ErrorRootResponse: Decodable {
+struct ErrorRootResponse: Decodable, Sendable {
     let error: ErrorResponse
 }
 
-struct ErrorResponse: Decodable {
+struct ErrorResponse: Decodable, Sendable {
     let message: String
     let type: String?
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-public enum OpenAIClientConfigurationError: LocalizedError, Equatable {
+public enum OpenAIClientConfigurationError: LocalizedError, Equatable, Sendable {
     case plistNotFound(name: String)
     case invalidPlist(url: URL)
     case missingRequiredKey(String)
@@ -38,10 +38,13 @@ public extension OpenAIClientConfiguration {
         public static let retryableStatusCodes = "retryableStatusCodes"
     }
 
+    /// Creates a configuration from a plist dictionary.
+    /// Throws `OpenAIClientConfigurationError` for plist-level issues
+    /// and `ConfigurationError` for invalid configuration values.
     init(plistDictionary: [String: Any]) throws {
-        let apiKey = try Self.requiredStringValue(for: PlistKey.apiKey, in: plistDictionary)
+        let apiKeyString = try Self.requiredStringValue(for: PlistKey.apiKey, in: plistDictionary)
 
-        let model = Self.stringValue(for: PlistKey.model, in: plistDictionary) ?? "gpt-4.1-mini"
+        let modelString = Self.stringValue(for: PlistKey.model, in: plistDictionary) ?? "gpt-5.4-mini"
         let systemPrompt = Self.stringValue(for: PlistKey.systemPrompt, in: plistDictionary) ?? ""
         let temperature = Self.doubleValue(for: PlistKey.temperature, in: plistDictionary) ?? 0.5
         let maxContextCharacters = Self.intValue(for: PlistKey.maxContextCharacters, in: plistDictionary) ?? 16_000
@@ -70,40 +73,59 @@ public extension OpenAIClientConfiguration {
             retryableStatusCodes: Set(Self.intArrayValue(for: PlistKey.retryableStatusCodes, in: plistDictionary) ?? [408, 409, 429, 500, 502, 503, 504])
         )
 
-        self.init(
-            apiKey: apiKey,
-            model: model,
+        try self.init(
+            apiKey: APIKey(apiKeyString),
+            model: OpenAIModel(rawValue: modelString),
             systemPrompt: systemPrompt,
             temperature: temperature,
-            maxContextCharacters: maxContextCharacters,
-            maxHistoryItems: maxHistoryItems,
+            historyTrimmingStrategy: .both(maxCharacters: max(1, maxContextCharacters), maxItems: max(1, maxHistoryItems)),
             requestTimeout: requestTimeout,
             retryPolicy: retryPolicy,
             endpoint: endpoint
         )
     }
 
+    /// Creates a configuration from a plist file at the given URL.
     init(plistURL: URL) throws {
-        let data = try Data(contentsOf: plistURL)
-        let raw = try PropertyListSerialization.propertyList(from: data, format: nil)
-        guard let dictionary = raw as? [String: Any] else {
-            throw OpenAIClientConfigurationError.invalidPlist(url: plistURL)
-        }
-        try self.init(plistDictionary: dictionary)
+        try self.init(plistData: Data(contentsOf: plistURL), sourceURL: plistURL)
     }
 
+    /// Loads a configuration from a plist file in the given bundle.
+    ///
+    /// - Note: `Bundle.main` is unavailable in Swift Package test targets.
+    ///   For testing, use `loadFromPlist(at:)` with a direct file URL instead.
     static func loadFromPlist(
         named name: String = "OpenAIClientConfiguration",
         in bundle: Bundle = .main
     ) throws -> OpenAIClientConfiguration {
+        // #if DEBUG
+        // Note: Bundle.main does not resolve correctly in Swift Package test targets.
+        // Prefer loadFromPlist(at:) with a file URL when writing tests.
+        // #endif
         guard let url = bundle.url(forResource: name, withExtension: "plist") else {
             throw OpenAIClientConfigurationError.plistNotFound(name: name)
         }
         return try OpenAIClientConfiguration(plistURL: url)
     }
+
+    /// Loads a configuration from a plist file at the given URL.
+    /// Useful in tests or when the plist is not in a bundle.
+    static func loadFromPlist(at url: URL) throws -> OpenAIClientConfiguration {
+        try OpenAIClientConfiguration(plistURL: url)
+    }
 }
 
+// MARK: - Private Helpers
+
 private extension OpenAIClientConfiguration {
+    init(plistData data: Data, sourceURL: URL) throws {
+        let raw = try PropertyListSerialization.propertyList(from: data, format: nil)
+        guard let dictionary = raw as? [String: Any] else {
+            throw OpenAIClientConfigurationError.invalidPlist(url: sourceURL)
+        }
+        try self.init(plistDictionary: dictionary)
+    }
+
     static func stringValue(for key: String, in dictionary: [String: Any]) -> String? {
         guard let value = dictionary[key] as? String else {
             return nil
