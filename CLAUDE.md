@@ -53,16 +53,17 @@ All methods automatically maintain multi-turn conversation history internally. H
 - `OpenAIClientRetryPolicy` — retry config with exponential backoff. Has `.none` and `.standard` presets.
 - `OpenAIMessage` — simple role+content pair used for conversation history.
 - `ConfigurationError` — validation error enum thrown from configuration init.
-- `OpenAIClientError` / `OpenAIClientConfigurationError` — networking and plist error enums.
+- `OpenAIClientError` — networking error enum (`invalidResponse`, `emptyResponse`, `badResponse`).
+- `OpenAIClientConfigurationError` — plist loading error enum.
 - `OpenAIClientLogger` — protocol for receiving lifecycle events; `NoOpLogger` (default) and `PrintLogger` built-in.
 - Models in `OpenAIResponsesModels.swift` are internal types mapping to the Responses API JSON schema.
 
 ### Testing Approach
 
-Tests use the **Swift Testing** framework (`import Testing`). `URLProtocolMock` (a custom `URLProtocol` subclass) is injected via a custom `URLSession` to intercept network calls. The mock captures request bodies for assertion. There are 37 tests across 4 test files:
+Tests use the **Swift Testing** framework (`import Testing`). `URLProtocolMock` (a custom `URLProtocol` subclass) is injected via a custom `URLSession` to intercept network calls. The mock captures request bodies for assertion. There are 43 tests across 5 test files:
 
 - `SDOpenAIClientTests.swift` — contains two nested suites under a serialized parent `NetworkTests`:
-  - `NetworkTests.ClientTests` — integration tests for send, stream, metadata, plist loading
+  - `NetworkTests.ClientTests` — integration tests for send, stream, metadata, plist loading, error handling, retry logic, history clearing, configuration updates, and instruction merging
   - `NetworkTests.HistoryTrimming` — trimming strategy behavior
 - `OpenAIClientProtocolTests.swift` — mock client behavior
 - `ConfigurationValidationTests.swift` — throwing init validation

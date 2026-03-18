@@ -23,7 +23,7 @@ In Xcode:
 
 1. `File` -> `Swift Packages` -> `Add Package Dependency...`
 2. Enter `https://github.com/saurabhdave/SDOpenAIClientKit.git`
-3. Choose dependency rule `Up to Next Major Version` and set `1.0.0`
+3. Choose dependency rule `Up to Next Major Version` and set `2.0.0`
 4. Click `Add Package`
 5. Import in your code:
 
@@ -34,7 +34,7 @@ import SDOpenAIClient
 Or with SwiftPM:
 
 ```swift
-.package(url: "https://github.com/saurabhdave/SDOpenAIClientKit.git", from: "1.0.0")
+.package(url: "https://github.com/saurabhdave/SDOpenAIClientKit.git", from: "2.0.0")
 ```
 
 Then add the product to your target dependencies:
@@ -154,7 +154,7 @@ Attach a logger to receive lifecycle events:
 // Built-in console logger
 let config = try OpenAIClientConfiguration(
     apiKey: APIKey("key"),
-    logger: PrintLogger(minimumLevel: .debug)
+    logger: PrintLogger()
 )
 
 // Custom logger — conform to OpenAIClientLogger
